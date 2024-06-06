@@ -90,6 +90,50 @@ void HAL_MspInit(void)
 }
 
 /**
+* @brief MCE MSP Initialization
+* This function configures the hardware resources used in this example
+* @param hmce: MCE handle pointer
+* @retval None
+*/
+void HAL_MCE_MspInit(MCE_HandleTypeDef* hmce)
+{
+  if(hmce->Instance==MCE1)
+  {
+  /* USER CODE BEGIN MCE1_MspInit 0 */
+
+  /* USER CODE END MCE1_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_XSPI1_CLK_ENABLE();
+  /* USER CODE BEGIN MCE1_MspInit 1 */
+
+  /* USER CODE END MCE1_MspInit 1 */
+  }
+
+}
+
+/**
+* @brief MCE MSP De-Initialization
+* This function freeze the hardware resources used in this example
+* @param hmce: MCE handle pointer
+* @retval None
+*/
+void HAL_MCE_MspDeInit(MCE_HandleTypeDef* hmce)
+{
+  if(hmce->Instance==MCE1)
+  {
+  /* USER CODE BEGIN MCE1_MspDeInit 0 */
+
+  /* USER CODE END MCE1_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_XSPI1_CLK_DISABLE();
+  /* USER CODE BEGIN MCE1_MspDeInit 1 */
+
+  /* USER CODE END MCE1_MspDeInit 1 */
+  }
+
+}
+
+/**
 * @brief XSPI MSP Initialization
 * This function configures the hardware resources used in this example
 * @param hxspi: XSPI handle pointer

@@ -42,18 +42,24 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+DMA_HandleTypeDef handle_HPDMA1_Channel15;
+
+MCE_HandleTypeDef hmce1;
+
 XSPI_HandleTypeDef hxspi1;
 
 /* USER CODE BEGIN PV */
-
+const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_SBS_Init(void);
+static void MX_HPDMA1_Init(void);
 static void MX_XSPI1_Init(void);
+static void MX_SBS_Init(void);
+static void MX_MCE1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -78,14 +84,6 @@ int main(void)
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
 
-  /* Enable the CPU Cache */
-
-  /* Enable I-Cache---------------------------------------------------------*/
-  SCB_EnableICache();
-
-  /* Enable D-Cache---------------------------------------------------------*/
-  SCB_EnableDCache();
-
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -104,11 +102,33 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_SBS_Init();
+  MX_HPDMA1_Init();
   MX_XSPI1_Init();
+  MX_SBS_Init();
+  MX_MCE1_Init();
   MX_EXTMEM_MANAGER_Init();
   /* USER CODE BEGIN 2 */
+  {
+    MCE_AESConfigTypeDef  AESConfig;
+    MCE_RegionConfigTypeDef pConfig;
+    MCE_NoekeonConfigTypeDef pConfigNeo;
+    AESConfig.Nonce[0]=0x0;
+    AESConfig.Nonce[1]=0x0;
+    AESConfig.Version=0x0;
+    AESConfig.pKey=key;
+    HAL_MCE_ConfigAESContext(&hmce1,&AESConfig,MCE_CONTEXT1);
+    HAL_MCE_EnableAESContext(&hmce1,MCE_CONTEXT1);
 
+    pConfig.ContextID=MCE_CONTEXT1;
+    pConfig.StartAddress=0x90000000;
+    pConfig.EndAddress=0x92000000;
+    pConfig.Mode=MCE_BLOCK_CIPHER;
+    pConfig.AccessMode=MCE_REGION_READONLY;
+    pConfig.PrivilegedAccess=MCE_REGION_PRIV;
+    HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
+    HAL_MCE_SetRegionAESContext(&hmce1,MCE_CONTEXT1,MCE_REGION1);
+    HAL_MCE_EnableRegion(&hmce1,MCE_REGION1);
+  }
   /* USER CODE END 2 */
 
   /* Launch the application */
@@ -193,6 +213,78 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief HPDMA1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_HPDMA1_Init(void)
+{
+
+  /* USER CODE BEGIN HPDMA1_Init 0 */
+
+  /* USER CODE END HPDMA1_Init 0 */
+
+  /* Peripheral clock enable */
+  __HAL_RCC_HPDMA1_CLK_ENABLE();
+
+  /* USER CODE BEGIN HPDMA1_Init 1 */
+
+  /* USER CODE END HPDMA1_Init 1 */
+  handle_HPDMA1_Channel15.Instance = HPDMA1_Channel15;
+  handle_HPDMA1_Channel15.Init.Request = DMA_REQUEST_SW;
+  handle_HPDMA1_Channel15.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+  handle_HPDMA1_Channel15.Init.Direction = DMA_MEMORY_TO_MEMORY;
+  handle_HPDMA1_Channel15.Init.SrcInc = DMA_SINC_INCREMENTED;
+  handle_HPDMA1_Channel15.Init.DestInc = DMA_DINC_INCREMENTED;
+  handle_HPDMA1_Channel15.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+  handle_HPDMA1_Channel15.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+  handle_HPDMA1_Channel15.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+  handle_HPDMA1_Channel15.Init.SrcBurstLength = 16;
+  handle_HPDMA1_Channel15.Init.DestBurstLength = 16;
+  handle_HPDMA1_Channel15.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0|DMA_DEST_ALLOCATED_PORT0;
+  handle_HPDMA1_Channel15.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+  handle_HPDMA1_Channel15.Init.Mode = DMA_NORMAL;
+  if (HAL_DMA_Init(&handle_HPDMA1_Channel15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_DMA_ConfigChannelAttributes(&handle_HPDMA1_Channel15, DMA_CHANNEL_PRIV) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN HPDMA1_Init 2 */
+
+  /* USER CODE END HPDMA1_Init 2 */
+
+}
+
+/**
+  * @brief MCE1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_MCE1_Init(void)
+{
+
+  /* USER CODE BEGIN MCE1_Init 0 */
+
+  /* USER CODE END MCE1_Init 0 */
+
+  /* USER CODE BEGIN MCE1_Init 1 */
+
+  /* USER CODE END MCE1_Init 1 */
+  hmce1.Instance = MCE1;
+  if (HAL_MCE_Init(&hmce1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN MCE1_Init 2 */
+
+  /* USER CODE END MCE1_Init 2 */
+
 }
 
 /**
@@ -309,20 +401,6 @@ static void MPU_Config(void)
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
   MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
-  MPU_InitStruct.BaseAddress = 0x90000000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_32MB;
-  MPU_InitStruct.SubRegionDisable = 0x0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
   /* Enables the MPU */

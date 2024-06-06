@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "memory_wrapper.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,11 +45,14 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+MCE_HandleTypeDef hmce1;
 
 XSPI_HandleTypeDef hxspi1;
 
 /* USER CODE BEGIN PV */
-
+const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
+#define MAX_PAGE_WRITE 0x100
+uint32_t buffer[MAX_PAGE_WRITE]  __attribute__ ((aligned (1024))) ;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +60,7 @@ XSPI_HandleTypeDef hxspi1;
 static void MX_GPIO_Init(void);
 static void MX_SBS_Init(void);
 static void MX_XSPI1_Init(void);
+static void MX_MCE1_Init(void);
 static void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
@@ -65,7 +69,59 @@ static void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint32_t DataSize){
 
+  memcpy(buffer,ptrData,DataSize);
+  DMA_HandleTypeDef handle_HPDMA1_Channel15;
+  HAL_Delay(2);
+  __HAL_RCC_HPDMA1_CLK_ENABLE();
+  handle_HPDMA1_Channel15.Instance = HPDMA1_Channel15;
+  handle_HPDMA1_Channel15.Init.Request = DMA_REQUEST_SW;
+  handle_HPDMA1_Channel15.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+  handle_HPDMA1_Channel15.Init.Direction = DMA_MEMORY_TO_MEMORY;
+  handle_HPDMA1_Channel15.Init.SrcInc = DMA_SINC_INCREMENTED;
+  handle_HPDMA1_Channel15.Init.DestInc = DMA_DINC_INCREMENTED;
+  handle_HPDMA1_Channel15.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+  handle_HPDMA1_Channel15.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+  handle_HPDMA1_Channel15.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+  handle_HPDMA1_Channel15.Init.SrcBurstLength = 16;
+  handle_HPDMA1_Channel15.Init.DestBurstLength = 16;
+  handle_HPDMA1_Channel15.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0|DMA_DEST_ALLOCATED_PORT0;
+  handle_HPDMA1_Channel15.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+  handle_HPDMA1_Channel15.Init.Mode = DMA_NORMAL;
+  if (HAL_DMA_Init(&handle_HPDMA1_Channel15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_DMA_ConfigChannelAttributes(&handle_HPDMA1_Channel15, DMA_CHANNEL_PRIV) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,destination_Address,DataSize);
+  HAL_DMA_PollForTransfer(&handle_HPDMA1_Channel15,HAL_DMA_FULL_TRANSFER,0xFFFFFFFF);
+  HAL_Delay(2);
+}
+
+
+MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
+  MEM_STATUS retr = MEM_OK; /* No error returned */
+
+  if((Size%MAX_PAGE_WRITE) ==0){
+    /* memory mapped write for 256B*/
+    if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, Address, buffer, Size) != EXTMEM_OK)
+    {
+      retr = MEM_FAIL;
+    }
+  }else{
+    /* normal byte write*/
+    if (EXTMEM_Write(STM32EXTLOADER_DEVICE_MEMORY_ID, Address & 0x0FFFFFFFUL, buffer, Size) != EXTMEM_OK)
+    {
+      retr = MEM_FAIL;
+    }
+  }
+
+  return retr;
+}
 /* USER CODE END 0 */
 
 /**
@@ -91,10 +147,10 @@ uint32_t extmemloader_Init()
   /* Enable the CPU Cache */
 
   /* Enable I-Cache---------------------------------------------------------*/
-  SCB_EnableICache();
+//  SCB_EnableICache();
 
   /* Enable D-Cache---------------------------------------------------------*/
-  SCB_EnableDCache();
+//  SCB_EnableDCache();
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -121,10 +177,32 @@ uint32_t extmemloader_Init()
 
   MX_XSPI1_Init();
 
+  MX_MCE1_Init();
+
   MX_EXTMEM_MANAGER_Init();
 
   /* USER CODE BEGIN 2 */
+  {
+    MCE_AESConfigTypeDef  AESConfig;
+    MCE_RegionConfigTypeDef pConfig;
+    MCE_NoekeonConfigTypeDef pConfigNeo;
+    AESConfig.Nonce[0]=0x0;
+    AESConfig.Nonce[1]=0x0;
+    AESConfig.Version=0x0;
+    AESConfig.pKey=key;
+    HAL_MCE_ConfigAESContext(&hmce1,&AESConfig,MCE_CONTEXT1);
+    HAL_MCE_EnableAESContext(&hmce1,MCE_CONTEXT1);
 
+    pConfig.ContextID=MCE_CONTEXT1;
+    pConfig.StartAddress=0x90000000;
+    pConfig.EndAddress=0x92000000;
+    pConfig.Mode=MCE_BLOCK_CIPHER;
+    pConfig.AccessMode=MCE_REGION_READONLY;
+    pConfig.PrivilegedAccess=MCE_REGION_PRIV;
+    HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
+    HAL_MCE_SetRegionAESContext(&hmce1,MCE_CONTEXT1,MCE_REGION1);
+    HAL_MCE_EnableRegion(&hmce1,MCE_REGION1);
+  }
   /* USER CODE END 2 */
 
   return retr;
@@ -196,6 +274,32 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief MCE1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_MCE1_Init(void)
+{
+
+  /* USER CODE BEGIN MCE1_Init 0 */
+
+  /* USER CODE END MCE1_Init 0 */
+
+  /* USER CODE BEGIN MCE1_Init 1 */
+
+  /* USER CODE END MCE1_Init 1 */
+  hmce1.Instance = MCE1;
+  if (HAL_MCE_Init(&hmce1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN MCE1_Init 2 */
+
+  /* USER CODE END MCE1_Init 2 */
+
 }
 
 /**

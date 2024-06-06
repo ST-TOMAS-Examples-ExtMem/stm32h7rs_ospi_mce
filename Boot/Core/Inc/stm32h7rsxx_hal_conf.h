@@ -60,7 +60,7 @@
 /* #define HAL_JPEG_MODULE_ENABLED   */
 /* #define HAL_LPTIM_MODULE_ENABLED   */
 /* #define HAL_LTDC_MODULE_ENABLED   */
-/* #define HAL_MCE_MODULE_ENABLED   */
+#define HAL_MCE_MODULE_ENABLED
 /* #define HAL_MDF_MODULE_ENABLED   */
 /* #define HAL_MMC_MODULE_ENABLED   */
 /* #define HAL_NAND_MODULE_ENABLED   */
