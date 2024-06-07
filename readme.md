@@ -81,7 +81,7 @@ const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
     pConfig.StartAddress=0x90000000;
     pConfig.EndAddress=0x92000000;
     pConfig.Mode=MCE_BLOCK_CIPHER;
-    pConfig.AccessMode=MCE_REGION_READONLY;
+    pConfig.AccessMode=MCE_REGION_READWRITE;
     pConfig.PrivilegedAccess=MCE_REGION_PRIV;
     HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
     HAL_MCE_SetRegionAESContext(&hmce1,MCE_CONTEXT1,MCE_REGION1);
@@ -108,7 +108,7 @@ For copy:
     pConfig.StartAddress=0x90000000;
     pConfig.EndAddress=0x92000000;
     pConfig.Mode=MCE_BLOCK_CIPHER;
-    pConfig.AccessMode=MCE_REGION_READONLY;
+    pConfig.AccessMode=MCE_REGION_READWRITE;
     pConfig.PrivilegedAccess=MCE_REGION_PRIV;
     HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
     HAL_MCE_SetRegionAESContext(&hmce1,MCE_CONTEXT1,MCE_REGION1);
@@ -124,8 +124,14 @@ And we put HDMA there.
 ```c
 /* USER CODE BEGIN 0 */
 void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint32_t DataSize){
-
-  memcpy(buffer,local_Data,size_write);
+  if(DataSize<MAX_PAGE_WRITE){
+    memset(&buffer[DataSize],0xff,MAX_PAGE_WRITE-DataSize);
+  }
+  memcpy(buffer,ptrData,DataSize);
+  if(DataSize<MAX_PAGE_WRITE){
+    DataSize=MAX_PAGE_WRITE;
+  }
+  
   DMA_HandleTypeDef handle_HPDMA1_Channel15;
   HAL_Delay(2);
   __HAL_RCC_HPDMA1_CLK_ENABLE();
@@ -163,7 +169,13 @@ for copy:
 ```c
 void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint32_t DataSize){
 
-  memcpy(buffer,local_Data,size_write);
+  if(DataSize<MAX_PAGE_WRITE){
+    memset(&buffer[DataSize],0xff,MAX_PAGE_WRITE-DataSize);
+  }
+  memcpy(buffer,ptrData,DataSize);
+  if(DataSize<MAX_PAGE_WRITE){
+    DataSize=MAX_PAGE_WRITE;
+  }
   DMA_HandleTypeDef handle_HPDMA1_Channel15;
   HAL_Delay(2);
   __HAL_RCC_HPDMA1_CLK_ENABLE();
@@ -221,7 +233,7 @@ To use EXTMEM_MemCopy we need also modify another function which is deciding way
 MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
   MEM_STATUS retr = MEM_OK; /* No error returned */
 
-  if((Size%MAX_PAGE_WRITE) ==0){
+  if(Size>=MAX_PAGE_WRITE){
     /* memory mapped write for 256B*/
     if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, Address, buffer, Size) != EXTMEM_OK)
     {
@@ -247,7 +259,7 @@ MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
   MEM_STATUS retr = MEM_OK; /* No error returned */
   uint32_t addr = Address & 0x0FFFFFFFUL;
 
-  if((Size%MAX_PAGE_WRITE) ==0){
+  if(Size>=MAX_PAGE_WRITE){
     /* memory mapped write for 256B*/
     if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, addr, buffer, Size) != EXTMEM_OK)
     {
@@ -264,6 +276,93 @@ MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
   return retr;
 }
 ```
+
+7. Disable the write access to ospi memory from core with **MPU**
+
+Put it to `extmemloader_Init` function **in extmemloader_init.c**
+
+```c
+  /* USER CODE BEGIN 1 */
+  MPU_Region_InitTypeDef MPU_InitStruct = {0};
+  /* Disables the MPU */
+  HAL_MPU_Disable();
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
+  MPU_InitStruct.BaseAddress = 0x90000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_256MB;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+  /* Enables the MPU */
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+  /* USER CODE END 1 */
+```
+
+for copy
+
+```c
+  MPU_Region_InitTypeDef MPU_InitStruct = {0};
+  /* Disables the MPU */
+  HAL_MPU_Disable();
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
+  MPU_InitStruct.BaseAddress = 0x90000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_256MB;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+  /* Enables the MPU */
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+```
+
+   8. Not use cache in external loader and keep mpu in use
+
+```c
+  /* Enable I-Cache---------------------------------------------------------*/
+  //SCB_EnableICache();
+
+  /* Enable D-Cache---------------------------------------------------------*/
+  //SCB_EnableDCache();
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* MPU Configuration--------------------------------------------------------*/
+  //HAL_MPU_Disable();
+```
+
+for copy
+
+```c
+  //SCB_EnableICache();
+```
+
+```c
+  //SCB_EnableDCache();
+```
+
+```c
+  //HAL_MPU_Disable();
+```
+
 
 
 **Bootloader**
@@ -336,5 +435,20 @@ For copy:
     HAL_MCE_EnableRegion(&hmce1,MCE_REGION1);
   }
   ```
+
+4. Add cahche invalidation to be sure wha will have valid content.
+
+```c 
+  /* USER CODE BEGIN 1 */
+  SCB_InvalidateDCache();
+  SCB_InvalidateICache();
+  /* USER CODE END 1 */
+```
+  for copy:
+
+```c
+  SCB_InvalidateDCache();
+  SCB_InvalidateICache();
+```
 
 Now we can **compile** code and run it from **Application**.
