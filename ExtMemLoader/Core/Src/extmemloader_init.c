@@ -221,7 +221,7 @@ uint32_t extmemloader_Init()
     pConfig.ContextID=MCE_CONTEXT1;
     pConfig.StartAddress=0x90000000;
     pConfig.EndAddress=0x92000000;
-    pConfig.Mode=MCE_BLOCK_CIPHER;
+    pConfig.Mode=MCE_STREAM_CIPHER;
     pConfig.AccessMode=MCE_REGION_READWRITE;
     pConfig.PrivilegedAccess=MCE_REGION_PRIV;
     HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
