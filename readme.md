@@ -1,54 +1,53 @@
 # STM32H7R/S bootflash MCU + OSPI + MCE example
 
-We will use a already existing STM32H7R/S OSPI example from 
-
+We will utilize an existing OSPI example for the STM32H7R/S series, which can be found under
 [this link](https://github.com/ST-TOMAS-Examples-ExtMem)
 
-In tihs example we will use MCE protect our data by using encryption/decription. 
 
-The MCE will encrypt the data in external loader.
-And decription will be used in bootloader/application.
+In this example, the Memory Cipher Engine (MCE) will be employed to protect our code and data through the on-the-fly encryption/decryption. 
+The Memory Cipher Engine (MCE) will encrypt the data within the external memory loader, while decryption will be carried out in the bootloader or the application itself.
 
 ## STM32CubeMX 
 
 ### MCE1
 
-1. Select `MCE1` for **Bootloader** and **ExtMem Loader**
-2. In `Mode` set checkbox **Activated**
+1. Select `MCE1` for **Bootloader** and **ExtMem Loader**.
+2. In `Mode` ensure the **Activated** checkbox is checked.
 
 ![alt text](img/24_06_06_481.png)
 
 
-### HDMA
+### HPDMA (High-Performance Direct Memory Access)
 
-For encryption to work the memory must be in memory mapped mode. But we need to guarantee the correct acccesses which will be only write. For this reason the DMA must be used for write data to OSPI. 
+For encryption to work the memory must be in memory-mapped mode. But we need to guarantee the correct acccesses which will be only write. For this reason the DMA must be used for write data to OSPI. 
+To ensure successful encryption, the memory must be operated in memory-mapped mode. Additionally, it is essential to ensure that access is restricted to write-only operations. Therefore, the Direct Memory Access (DMA) should be utilized to write data to the Octal SPI (OSPI).
 
-1. Select **HDMA**
-2. Set `Channel15`  to **Standard request mode**
+1. Select **HPDMA1**.
+2. Set `Channel15`  to **Standard request mode**.
 
 ![hdma](img/24_06_06_482.png)
 
-3. Go to `SECURIT` tab
-4. Set `Enable Channel as Priviledged` to **PRIVILEDGED**
+3. Go to the `SECURITY` tab.
+4. Set `Enable Channel as Priviledged` to **PRIVILEDGED**.
 
 ![security](img/24_06_06_484.png)
 
-5. Got to `CH15` tab
-6. Set `Source Address Increment After Transfer` to **ENABLE**
-7. Set `Source Burst Length` to **16** (needed by MCE!)
-8. Set `Destination Address Increment After Transfer` to **ENABLE**
-9. Set `Destination Burst Length` to **16** (needed by MCE!)
+5. Navigate to the `CH15` tab.
+6. Set `Source Address Increment After Transfer` to **ENABLE**.
+7. Set `Source Burst Length` to **16** (needed by MCE!).
+8. Set `Destination Address Increment After Transfer` to **ENABLE**.
+9. Set `Destination Burst Length` to **16** (needed by MCE!).
 
 ![hdma config](img/24_06_06_486.png)
 
-Now we can **generate code**
+Now we can **generate code**.
 
-### CubeIDE
+### STM32CubeIDE
 
-**External loader** 
+**External Memory Loader** 
 
-1. Got to ExtMemLoader to file **extmemloader_init.c** in **Core/Src** folder
-2. We will ad our key for encryption/decription
+1. Go to ExtMemLoader to file **extmemloader_init.c** in **Core/Src** folder.
+2. Include the encryption/decryption key.
    
 ```c
 /* USER CODE BEGIN PV */
@@ -62,7 +61,7 @@ For copy:
 const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
 ```
 
-3. Configure MCE enable it
+3. Configure MCE and enable it.
 
 ```c
 /* USER CODE BEGIN 2 */
@@ -115,11 +114,10 @@ For copy:
     HAL_MCE_EnableRegion(&hmce1,MCE_REGION1);
   }
   ```
-Now we need to modify the write into memory to use HDMA instead of normal byte write. 
-We can do it with redefining weak `EXTMEM_MemCopy` function. 
-And we put HDMA there.
+We now need to update the memory write process to utilize High-Performance Direct Memory Access controller (HPDMA) rather than the standard byte write method. 
+This can be achieved by overriding the weak `EXTMEM_MemCopy` function with our own implementation that incorporates HPDMA.
 
-4. Add HDMA configuration to **extmemloader_init.c** file
+4. Add HPDMA configuration to **extmemloader_init.c** file.
 
 ```c
 /* USER CODE BEGIN 0 */
@@ -207,7 +205,7 @@ void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint3
 }
 ```
 
-5. Add temporary buffer to be sure all dma reads will be aligned
+5. Add a temporary buffer to ensure that all DMA reads are properly aligned.
 
 
 ```c
@@ -225,9 +223,9 @@ for copy:
 uint32_t buffer[MAX_PAGE_WRITE]  __attribute__ ((aligned (1024))) ;
 ```
 
-To use EXTMEM_MemCopy we need also modify another function which is deciding way how to write this function is `memory_write` in `memory_wrapper.c` in **Middleware/ST/STM32ExtMem_Loader/core**
+To utilize EXTMEM_MemCopy, we also need to modify an additional function that determines the method of writing. This function is `memory_write` in `memory_wrapper.c` in **Middleware/ST/STM32ExtMem_Loader/core**.
 
-6. We will redefine `memory_write` in our **extmemloader_init.c**
+6. We will redefine `memory_write` in our **extmemloader_init.c**.
 
 ```c
 MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
@@ -277,9 +275,8 @@ MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
 }
 ```
 
-7. Disable the write access to ospi memory from core with **MPU**
-
-Put it to `extmemloader_Init` function **in extmemloader_init.c**
+7. Disable write access to the OSPI memory from the core by configuring the **Memory Protection Unit (MPU)**.
+Insert the relevant code into the `extmemloader_Init` function found in **in extmemloader_init.c**.
 
 ```c
   /* USER CODE BEGIN 1 */
@@ -333,7 +330,7 @@ for copy
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 ```
 
-   8. Not use cache in external loader and keep mpu in use
+   8. Ensure that both Instruction Cache (ICache) and Data Cache (DCache) are disabled in the external memory loader, while maintaining the use of the Memory Protection Unit (MPU).
 
 ```c
   /* Enable I-Cache---------------------------------------------------------*/
@@ -367,8 +364,8 @@ for copy
 
 **Bootloader**
 
-1. Got to Bootloader **main.c** file
-2. We will ad our key for decription
+1. Navigate to the Bootloader **main.c** file.
+2. Include the encryption/decryption key.
    
 ```c
 /* USER CODE BEGIN PV */
@@ -382,7 +379,7 @@ For copy:
 const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
 ```
 
-3. Configure MCE enable it
+3. Configure MCE and enable it.
    
 ```c
 /* USER CODE BEGIN 2 */
@@ -436,7 +433,7 @@ For copy:
   }
   ```
 
-4. Add cahche invalidation to be sure wha will have valid content.
+4. Add cache invalidation to ensure their contents are valid.
 
 ```c 
   /* USER CODE BEGIN 1 */
@@ -451,4 +448,4 @@ For copy:
   SCB_InvalidateICache();
 ```
 
-Now we can **compile** code and run it from **Application**.
+Now we can **compile** the code and run it from the **Application**.
