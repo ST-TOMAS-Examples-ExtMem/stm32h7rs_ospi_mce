@@ -129,7 +129,6 @@ void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint3
   if(DataSize<MAX_PAGE_WRITE){
     DataSize=MAX_PAGE_WRITE;
   }
-  
   DMA_HandleTypeDef handle_HPDMA1_Channel15;
   HAL_Delay(2);
   __HAL_RCC_HPDMA1_CLK_ENABLE();
@@ -155,7 +154,7 @@ void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint3
   {
     Error_Handler();
   }
-  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,local_Address,size_write);
+  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,destination_Address,DataSize);
   HAL_DMA_PollForTransfer(&handle_HPDMA1_Channel15,HAL_DMA_FULL_TRANSFER,0xFFFFFFFF);
   HAL_Delay(2);
 }
@@ -166,7 +165,6 @@ for copy:
 
 ```c
 void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint32_t DataSize){
-
   if(DataSize<MAX_PAGE_WRITE){
     memset(&buffer[DataSize],0xff,MAX_PAGE_WRITE-DataSize);
   }
@@ -177,7 +175,7 @@ void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint3
   DMA_HandleTypeDef handle_HPDMA1_Channel15;
   HAL_Delay(2);
   __HAL_RCC_HPDMA1_CLK_ENABLE();
-  handle_HPDMA1_Channel15.Instance = HPDMA1_Channel12;
+  handle_HPDMA1_Channel15.Instance = HPDMA1_Channel15;
   handle_HPDMA1_Channel15.Init.Request = DMA_REQUEST_SW;
   handle_HPDMA1_Channel15.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
   handle_HPDMA1_Channel15.Init.Direction = DMA_MEMORY_TO_MEMORY;
@@ -199,7 +197,7 @@ void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint3
   {
     Error_Handler();
   }
-  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,local_Address,size_write);
+  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,destination_Address,DataSize);
   HAL_DMA_PollForTransfer(&handle_HPDMA1_Channel15,HAL_DMA_FULL_TRANSFER,0xFFFFFFFF);
   HAL_Delay(2);
 }
@@ -255,17 +253,16 @@ for copy:
 ```c
 MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
   MEM_STATUS retr = MEM_OK; /* No error returned */
-  uint32_t addr = Address & 0x0FFFFFFFUL;
 
   if(Size>=MAX_PAGE_WRITE){
     /* memory mapped write for 256B*/
-    if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, addr, buffer, Size) != EXTMEM_OK)
+    if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, Address, buffer, Size) != EXTMEM_OK)
     {
       retr = MEM_FAIL;
     }
   }else{
     /* normal byte write*/
-    if (EXTMEM_Write(STM32EXTLOADER_DEVICE_MEMORY_ID, addr, buffer, Size) != EXTMEM_OK)
+    if (EXTMEM_Write(STM32EXTLOADER_DEVICE_MEMORY_ID, Address & 0x0FFFFFFFUL, buffer, Size) != EXTMEM_OK)
     {
       retr = MEM_FAIL;
     }
