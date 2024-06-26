@@ -51,8 +51,10 @@ XSPI_HandleTypeDef hxspi1;
 
 /* USER CODE BEGIN PV */
 const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
-#define MAX_PAGE_WRITE 0x100
-uint32_t buffer[MAX_PAGE_WRITE]  __attribute__ ((aligned (1024))) ;
+
+// **UNCOMMENT**
+// #define MAX_PAGE_WRITE 0x100
+// uint32_t buffer[MAX_PAGE_WRITE]  __attribute__ ((aligned (1024))) ;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,64 +71,65 @@ static void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint32_t DataSize){
-  if(DataSize<MAX_PAGE_WRITE){
-    memset(&buffer[DataSize],0xff,MAX_PAGE_WRITE-DataSize);
-  }
-  memcpy(buffer,ptrData,DataSize);
-  if(DataSize<MAX_PAGE_WRITE){
-    DataSize=MAX_PAGE_WRITE;
-  }
-  DMA_HandleTypeDef handle_HPDMA1_Channel15;
-  HAL_Delay(2);
-  __HAL_RCC_HPDMA1_CLK_ENABLE();
-  handle_HPDMA1_Channel15.Instance = HPDMA1_Channel15;
-  handle_HPDMA1_Channel15.Init.Request = DMA_REQUEST_SW;
-  handle_HPDMA1_Channel15.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-  handle_HPDMA1_Channel15.Init.Direction = DMA_MEMORY_TO_MEMORY;
-  handle_HPDMA1_Channel15.Init.SrcInc = DMA_SINC_INCREMENTED;
-  handle_HPDMA1_Channel15.Init.DestInc = DMA_DINC_INCREMENTED;
-  handle_HPDMA1_Channel15.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
-  handle_HPDMA1_Channel15.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
-  handle_HPDMA1_Channel15.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-  handle_HPDMA1_Channel15.Init.SrcBurstLength = 16;
-  handle_HPDMA1_Channel15.Init.DestBurstLength = 16;
-  handle_HPDMA1_Channel15.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0|DMA_DEST_ALLOCATED_PORT0;
-  handle_HPDMA1_Channel15.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-  handle_HPDMA1_Channel15.Init.Mode = DMA_NORMAL;
-  if (HAL_DMA_Init(&handle_HPDMA1_Channel15) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_DMA_ConfigChannelAttributes(&handle_HPDMA1_Channel15, DMA_CHANNEL_PRIV) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,destination_Address,DataSize);
-  HAL_DMA_PollForTransfer(&handle_HPDMA1_Channel15,HAL_DMA_FULL_TRANSFER,0xFFFFFFFF);
-  HAL_Delay(2);
-}
+// **UNCOMMENT**
+// void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint32_t DataSize){
+//   if(DataSize<MAX_PAGE_WRITE){
+//     memset(&buffer[DataSize],0xff,MAX_PAGE_WRITE-DataSize);
+//   }
+//   memcpy(buffer,ptrData,DataSize);
+//   if(DataSize<MAX_PAGE_WRITE){
+//     DataSize=MAX_PAGE_WRITE;
+//   }
+//   DMA_HandleTypeDef handle_HPDMA1_Channel15;
+//   HAL_Delay(2);
+//   __HAL_RCC_HPDMA1_CLK_ENABLE();
+//   handle_HPDMA1_Channel15.Instance = HPDMA1_Channel15;
+//   handle_HPDMA1_Channel15.Init.Request = DMA_REQUEST_SW;
+//   handle_HPDMA1_Channel15.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+//   handle_HPDMA1_Channel15.Init.Direction = DMA_MEMORY_TO_MEMORY;
+//   handle_HPDMA1_Channel15.Init.SrcInc = DMA_SINC_INCREMENTED;
+//   handle_HPDMA1_Channel15.Init.DestInc = DMA_DINC_INCREMENTED;
+//   handle_HPDMA1_Channel15.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_BYTE;
+//   handle_HPDMA1_Channel15.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+//   handle_HPDMA1_Channel15.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+//   handle_HPDMA1_Channel15.Init.SrcBurstLength = 16;
+//   handle_HPDMA1_Channel15.Init.DestBurstLength = 16;
+//   handle_HPDMA1_Channel15.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0|DMA_DEST_ALLOCATED_PORT0;
+//   handle_HPDMA1_Channel15.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+//   handle_HPDMA1_Channel15.Init.Mode = DMA_NORMAL;
+//   if (HAL_DMA_Init(&handle_HPDMA1_Channel15) != HAL_OK)
+//   {
+//     Error_Handler();
+//   }
+//   if (HAL_DMA_ConfigChannelAttributes(&handle_HPDMA1_Channel15, DMA_CHANNEL_PRIV) != HAL_OK)
+//   {
+//     Error_Handler();
+//   }
+//   HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,destination_Address,DataSize);
+//   HAL_DMA_PollForTransfer(&handle_HPDMA1_Channel15,HAL_DMA_FULL_TRANSFER,0xFFFFFFFF);
+//   HAL_Delay(2);
+// }
 
+// **UNCOMMENT**
+// MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
+//   MEM_STATUS retr = MEM_OK; /* No error returned */
 
-MEM_STATUS memory_write(uint32_t Address, uint32_t Size, uint8_t* buffer){
-  MEM_STATUS retr = MEM_OK; /* No error returned */
+//   if(Size>=MAX_PAGE_WRITE){
+//     /* memory mapped write for 256B*/
+//     if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, Address, buffer, Size) != EXTMEM_OK)
+//     {
+//       retr = MEM_FAIL;
+//     }
+//   }else{
+//     /* normal byte write*/
+//     if (EXTMEM_Write(STM32EXTLOADER_DEVICE_MEMORY_ID, Address & 0x0FFFFFFFUL, buffer, Size) != EXTMEM_OK)
+//     {
+//       retr = MEM_FAIL;
+//     }
+//   }
 
-  if(Size>=MAX_PAGE_WRITE){
-    /* memory mapped write for 256B*/
-    if (EXTMEM_WriteInMappedMode(STM32EXTLOADER_DEVICE_MEMORY_ID, Address, buffer, Size) != EXTMEM_OK)
-    {
-      retr = MEM_FAIL;
-    }
-  }else{
-    /* normal byte write*/
-    if (EXTMEM_Write(STM32EXTLOADER_DEVICE_MEMORY_ID, Address & 0x0FFFFFFFUL, buffer, Size) != EXTMEM_OK)
-    {
-      retr = MEM_FAIL;
-    }
-  }
-
-  return retr;
-}
+//   return retr;
+// }
 /* USER CODE END 0 */
 
 /**

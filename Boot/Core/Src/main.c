@@ -49,7 +49,8 @@ MCE_HandleTypeDef hmce1;
 XSPI_HandleTypeDef hxspi1;
 
 /* USER CODE BEGIN PV */
-const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
+// **UNCOMMENT**
+// const uint32_t key[4] =     { 0x12345678, 0x0, 0x0, 0x0 };
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,27 +117,28 @@ int main(void)
   MX_MCE1_Init();
   MX_EXTMEM_MANAGER_Init();
   /* USER CODE BEGIN 2 */
-  {
-    MCE_AESConfigTypeDef  AESConfig;
-    MCE_RegionConfigTypeDef pConfig;
-    MCE_NoekeonConfigTypeDef pConfigNeo;
-    AESConfig.Nonce[0]=0x0;
-    AESConfig.Nonce[1]=0x0;
-    AESConfig.Version=0x0;
-    AESConfig.pKey=key;
-    HAL_MCE_ConfigAESContext(&hmce1,&AESConfig,MCE_CONTEXT1);
-    HAL_MCE_EnableAESContext(&hmce1,MCE_CONTEXT1);
+  // **UNCOMMENT**
+  // {
+  //   MCE_AESConfigTypeDef  AESConfig;
+  //   MCE_RegionConfigTypeDef pConfig;
+  //   MCE_NoekeonConfigTypeDef pConfigNeo;
+  //   AESConfig.Nonce[0]=0x0;
+  //   AESConfig.Nonce[1]=0x0;
+  //   AESConfig.Version=0x0;
+  //   AESConfig.pKey=key;
+  //   HAL_MCE_ConfigAESContext(&hmce1,&AESConfig,MCE_CONTEXT1);
+  //   HAL_MCE_EnableAESContext(&hmce1,MCE_CONTEXT1);
 
-    pConfig.ContextID=MCE_CONTEXT1;
-    pConfig.StartAddress=0x90000000;
-    pConfig.EndAddress=0x92000000;
-    pConfig.Mode=MCE_STREAM_CIPHER;
-    pConfig.AccessMode=MCE_REGION_READONLY;
-    pConfig.PrivilegedAccess=MCE_REGION_PRIV;
-    HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
-    HAL_MCE_SetRegionAESContext(&hmce1,MCE_CONTEXT1,MCE_REGION1);
-    HAL_MCE_EnableRegion(&hmce1,MCE_REGION1);
-  }
+  //   pConfig.ContextID=MCE_CONTEXT1;
+  //   pConfig.StartAddress=0x90000000;
+  //   pConfig.EndAddress=0x92000000;
+  //   pConfig.Mode=MCE_STREAM_CIPHER;
+  //   pConfig.AccessMode=MCE_REGION_READONLY;
+  //   pConfig.PrivilegedAccess=MCE_REGION_PRIV;
+  //   HAL_MCE_ConfigRegion(&hmce1,MCE_REGION1,&pConfig);
+  //   HAL_MCE_SetRegionAESContext(&hmce1,MCE_CONTEXT1,MCE_REGION1);
+  //   HAL_MCE_EnableRegion(&hmce1,MCE_REGION1);
+  // }
   /* USER CODE END 2 */
 
   /* Launch the application */
