@@ -102,7 +102,7 @@ void EXTMEM_MemCopy(uint32_t* destination_Address, const uint8_t* ptrData, uint3
   {
     Error_Handler();
   }
-  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,destination_Address,DataSize);
+  HAL_DMA_Start(&handle_HPDMA1_Channel15,(uint32_t)buffer,(uint32_t)destination_Address,DataSize);
   HAL_DMA_PollForTransfer(&handle_HPDMA1_Channel15,HAL_DMA_FULL_TRANSFER,0xFFFFFFFF);
   HAL_Delay(2);
 }
@@ -210,11 +210,10 @@ uint32_t extmemloader_Init()
   {
     MCE_AESConfigTypeDef  AESConfig;
     MCE_RegionConfigTypeDef pConfig;
-    MCE_NoekeonConfigTypeDef pConfigNeo;
     AESConfig.Nonce[0]=0x0;
     AESConfig.Nonce[1]=0x0;
     AESConfig.Version=0x0;
-    AESConfig.pKey=key;
+    AESConfig.pKey=(uint32_t*)key;
     HAL_MCE_ConfigAESContext(&hmce1,&AESConfig,MCE_CONTEXT1);
     HAL_MCE_EnableAESContext(&hmce1,MCE_CONTEXT1);
 
