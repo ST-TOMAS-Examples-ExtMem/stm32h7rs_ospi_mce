@@ -119,7 +119,6 @@ int main(void)
   {
     MCE_AESConfigTypeDef  AESConfig;
     MCE_RegionConfigTypeDef pConfig;
-    MCE_NoekeonConfigTypeDef pConfigNeo;
     AESConfig.Nonce[0]=0x0;
     AESConfig.Nonce[1]=0x0;
     AESConfig.Version=0x0;
